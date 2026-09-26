@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PT Mesin Isuzu Indonesia - Supplier Delivery Monitoring System</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        isuzu: {
+                            red: '#DC2626',
+                            darkred: '#991B1B',
+                            lightred: '#FEE2E2',
+                            dark: '#1F2937',
+                            gray: '#4B5563'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (XLSX) CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased selection:bg-red-500 selection:text-white">
+
+    <div id="app" class="min-h-screen flex flex-col relative">
+
+        <!-- LOGIN OVERLAY -->
+        <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+            <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden transition-all duration-300 transform">
+                <!-- Isuzu Red Top Accent -->
+                <div class="bg-isuzu-red p-6 text-white text-center relative">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl mb-3 backdrop-blur-md">
+                        <i data-lucide="truck" class="w-8 h-8 text-white"></i>
+                    </div>
+                    <h1 class="text-xl font-bold tracking-tight">PT MESIN ISUZU INDONESIA</h1>
+                    <p class="text-xs text-red-100 font-medium tracking-wider uppercase mt-1">Supplier Delivery Monitoring System</p>
+                </div>
+
+                <div class="p-6">
+                    <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">ID Pengguna / ID Supplier / Dept</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                    <i data-lucide="user" class="w-4 h-4"></i>
+                                </span>
+                                <input type="text" id="login-id" required placeholder="Contoh: ADMIN-MII / SUP-1001 / DEPT-MAINT" 
+                                    class="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-isuzu-red focus:bg-white transition-all">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Kata Sandi</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                    <i data-lucide="lock" class="w-4 h-4"></i>
+                                </span>
+                                <input type="password" id="login-password" required placeholder="••••••••" 
+                                    class="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-isuzu-red focus:bg-white transition-all">
+                            </div>
+                        </div>
+
+                        <div id="login-error" class="hidden text-xs text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-200 flex items-center gap-2">
+                            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+                            <span id="login-error-msg">ID atau Password salah!</span>
+                        </div>
+
+                        <button type="submit" class="w-full bg-isuzu-red hover:bg-isuzu-darkred text-white font-semibold py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm">
+                            <span>Masuk ke Sistem</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+
+                    <!-- QUICK DEMO LOGIN BUTTONS -->
+                    <div class="mt-6 pt-5 border-t border-slate-100">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">Uji Coba Cepat (Demo Preset)</p>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <button onclick="fillLogin('ADMIN-MII', 'admin123')" class="p-2 bg-slate-100 hover:bg-red-50 hover:text-isuzu-red text-slate-700 rounded-lg text-left transition flex items-center gap-1.5 border border-slate-200">
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-red-600"></i>
+                                <span class="truncate">Admin PT MII</span>
+                            </button>
+                            <button onclick="fillLogin('SUP-1001', 'supplier123')" class="p-2 bg-slate-100 hover:bg-red-50 hover:text-isuzu-red text-slate-700 rounded-lg text-left transition flex items-center gap-1.5 border border-slate-200">
+                                <i data-lucide="truck" class="w-3.5 h-3.5 text-blue-600"></i>
+                                <span class="truncate">Supplier (Astra Otoparts)</span>
+                            </button>
+                            <button onclick="fillLogin('SUP-1002', 'supplier123')" class="p-2 bg-slate-100 hover:bg-red-50 hover:text-isuzu-red text-slate-700 rounded-lg text-left transition flex items-center gap-1.5 border border-slate-200">
+                                <i data-lucide="truck" class="w-3.5 h-3.5 text-indigo-600"></i>
+                                <span class="truncate">Supplier (Metal Presisi)</span>
+                            </button>
+                            <button onclick="fillLogin('DEPT-MAINT', 'user123')" class="p-2 bg-slate-100 hover:bg-red-50 hover:text-isuzu-red text-slate-700 rounded-lg text-left transition flex items-center gap-1.5 border border-slate-200">
+                                <i data-lucide="wrench" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span class="truncate">User Dept (Maintenance)</span>
+                            </button>
+                            <button onclick="fillLogin('DEPT-INDIRECT', 'user123')" class="p-2 col-span-2 bg-slate-100 hover:bg-red-50 hover:text-isuzu-red text-slate-700 rounded-lg text-left transition flex items-center gap-1.5 border border-slate-200">
+                                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-amber-600"></i>
+                                <span class="truncate">User Dept (Indirect Purchasing)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN HEADER -->
+        <header id="main-header" class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <!-- Brand Info -->
+                <div class="flex items-center gap-3">
+                    <div class="bg-isuzu-red text-white p-2 rounded-xl flex items-center justify-center font-black tracking-widest text-lg shadow-sm">
+                        ISUZU
+                    </div>
+                    <div>
+                        <h1 class="text-base font-bold text-slate-800 leading-tight">PT MESIN ISUZU INDONESIA</h1>
+                        <p class="text-xs text-slate-500 font-medium">Supplier Delivery Monitoring System</p>
+                    </div>
+                </div>
+
+                <!-- User Profile & Action -->
+                <div class="flex items-center gap-3">
+                    <div class="text-right hidden sm:block">
+                        <div id="user-display-name" class="text-sm font-bold text-slate-800">Nama Pengguna</div>
+                        <div class="flex items-center justify-end gap-1.5">
+                            <span id="user-role-badge" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-isuzu-red">
+                                Role Badge
+                            </span>
+                            <span id="user-dept-badge" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">
+                                Dept
+                            </span>
+                        </div>
+                    </div>
+                    <button onclick="logout()" title="Keluar Sistem" class="p-2 rounded-lg text-slate-500 hover:text-isuzu-red hover:bg-red-50 transition border border-slate-200">
+                        <i data-lucide="log-out" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- APP BODY (SIDEBAR + MAIN CONTENT) -->
+        <div class="flex-1 flex max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6">
+
+            <!-- SIDEBAR NAVIGATION -->
+            <aside class="w-64 shrink-0 hidden md:block">
+                <nav class="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm space-y-1 sticky top-22">
+                    <div class="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Navigasi Utama</div>
+                    
+                    <button id="nav-dashboard" onclick="switchTab('dashboard')" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-isuzu-red transition">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                        <span>Dashboard & Laporan</span>
+                    </button>
+
+                    <button id="nav-po" onclick="switchTab('po')" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-isuzu-red transition">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        <span>PO & Schedule Delivery</span>
+                    </button>
+
+                    <button id="nav-partial" onclick="switchTab('partial')" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-isuzu-red transition">
+                        <i data-lucide="boxes" class="w-4 h-4"></i>
+                        <span>Partial Delivery Log</span>
+                    </button>
+
+                    <div id="admin-nav-section" class="hidden pt-3 mt-3 border-t border-slate-100">
+                        <div class="px-3 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Pengaturan Admin</div>
+                        <button id="nav-accounts" onclick="switchTab('accounts')" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-isuzu-red transition">
+                            <i data-lucide="users" class="w-4 h-4"></i>
+                            <span>Setting Akun Pengguna</span>
+                        </button>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- MAIN CONTENT AREA -->
+            <main class="flex-1 min-w-0 space-y-6">
+
+                <!-- 1. DASHBOARD TAB -->
+                <section id="tab-dashboard" class="tab-content space-y-6">
+                    <!-- TODAY DELIVERIES ALERT CARD -->
+                    <div class="bg-gradient-to-r from-red-600 to-isuzu-darkred rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
+                        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                                    <i data-lucide="calendar-check" class="w-5 h-5 text-white"></i>
+                                </span>
+                                <div>
+                                    <h2 class="text-base font-bold">Jadwal Pengiriman Hari Ini (Schedule Delivery By Today)</h2>
+                                    <p class="text-xs text-red-100">Daftar item material yang dijadwalkan tiba hari ini</p>
+                                </div>
+                            </div>
+                            <span id="today-date-badge" class="text-xs font-medium bg-white/20 px-3 py-1 rounded-full backdrop-blur-md">
+                                Hari Ini
+                            </span>
+                        </div>
+
+                        <div id="today-delivery-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                            <!-- Injected dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- KPI CARDS SUMMARY -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                            <div class="p-3 bg-red-50 text-isuzu-red rounded-xl">
+                                <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 font-medium">Total Purchase Order</p>
+                                <h3 id="kpi-total-po" class="text-xl font-bold text-slate-800">0</h3>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                            <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                                <i data-lucide="clock" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 font-medium">Menunggu Approval</p>
+                                <h3 id="kpi-awaiting-approval" class="text-xl font-bold text-slate-800">0</h3>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                            <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                                <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 font-medium">On-Time Delivery Rate</p>
+                                <h3 id="kpi-otd-rate" class="text-xl font-bold text-slate-800">0%</h3>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                            <div class="p-3 bg-purple-50 text-purple-600 rounded-xl">
+                                <i data-lucide="hourglass" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 font-medium">Rata-rata Lead Time</p>
+                                <h3 id="kpi-avg-leadtime" class="text-xl font-bold text-slate-800">0 Hari</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PERFORMANCE CHARTS SECTION -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Chart 1: Supplier OTD Performance -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                    <i data-lucide="bar-chart-3" class="w-4 h-4 text-isuzu-red"></i>
+                                    Performansi Pengiriman Supplier (%)
+                                </h3>
+                                <span class="text-xs text-slate-400">On-Time Delivery</span>
+                            </div>
+                            <div class="h-64 relative">
+                                <canvas id="chart-supplier-performance"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Chart 2: Lead Time Trend by Department -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                    <i data-lucide="trending-up" class="w-4 h-4 text-isuzu-red"></i>
+                                    Rata-rata Lead Time per Departemen (Hari)
+                                </h3>
+                                <span class="text-xs text-slate-400">Release Email -> Full Delivered</span>
+                            </div>
+                            <div class="h-64 relative">
+                                <canvas id="chart-dept-leadtime"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 2. PO & SCHEDULE DELIVERY MONITORING TAB -->
+                <section id="tab-po" class="tab-content hidden space-y-4">
+                    <!-- TOOLBAR & FILTERS -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div>
+                                <h2 class="text-base font-bold text-slate-800">Data Purchase Order & Monitoring Pengiriman</h2>
+                                <p class="text-xs text-slate-500">Kelola schedule delivery, persetujuan PT MII, dan status partial delivery</p>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button onclick="exportPOToExcel()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-sm">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                    <span>Ekspor Excel</span>
+                                </button>
+
+                                <div id="admin-po-actions" class="hidden flex items-center gap-2">
+                                    <button onclick="downloadPOTemplate()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition border border-slate-200">
+                                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+                                        <span>Template PO Excel</span>
+                                    </button>
+                                    <label class="px-3 py-2 bg-isuzu-red hover:bg-isuzu-darkred text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition shadow-sm">
+                                        <i data-lucide="upload" class="w-4 h-4"></i>
+                                        <span>Upload PO Excel</span>
+                                        <input type="file" id="excel-po-file" accept=".xlsx, .xls" onchange="handlePOExcelUpload(event)" class="hidden">
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filter Controls -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-slate-100 text-xs">
+                            <div>
+                                <label class="block font-semibold text-slate-600 mb-1">Cari Data</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400">
+                                        <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                                    </span>
+                                    <input type="text" id="filter-search" oninput="applyPOFilters()" placeholder="No PO / Supplier / Material / PIC..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-isuzu-red">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block font-semibold text-slate-600 mb-1">Rentang Tanggal Schedule</label>
+                                <div class="grid grid-cols-2 gap-1">
+                                    <input type="date" id="filter-start-date" onchange="applyPOFilters()" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-isuzu-red">
+                                    <input type="date" id="filter-end-date" onchange="applyPOFilters()" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-isuzu-red">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block font-semibold text-slate-600 mb-1">Departemen Penerima</label>
+                                <select id="filter-dept" onchange="applyPOFilters()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-isuzu-red">
+                                    <option value="">Semua Departemen</option>
+                                    <option value="INDIRECT PURCHASING">INDIRECT PURCHASING</option>
+                                    <option value="MAINTENANCE">MAINTENANCE</option>
+                                    <option value="PRODUCTION">PRODUCTION</option>
+                                    <option value="GA">GA</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block font-semibold text-slate-600 mb-1">Status Delivery</label>
+                                <select id="filter-status" onchange="applyPOFilters()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-isuzu-red">
+                                    <option value="">Semua Status</option>
+                                    <option value="Draft Schedule">Draft Schedule</option>
+                                    <option value="Awaiting PT MII Approval">Awaiting PT MII Approval</option>
+                                    <option value="Schedule Approved">Schedule Approved</option>
+                                    <option value="Partial Delivered">Partial Delivered</option>
+                                    <option value="Closed / Full Delivered">Closed / Full Delivered</option>
+                                    <option value="Delayed">Delayed</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PO DATA TABLE -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-100 text-slate-700 uppercase font-bold tracking-wider border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">Nomor PO</th>
+                                        <th class="p-3">Tanggal PO</th>
+                                        <th class="p-3">Tanggal Purchasing Rilis PO by Email</th>
+                                        <th class="p-3">Kode Supplier</th>
+                                        <th class="p-3">Nama Supplier</th>
+                                        <th class="p-3">PIC Penerima</th>
+                                        <th class="p-3">Departemen Penerima</th>
+                                        <th class="p-3">Material Kode & Deskripsi</th>
+                                        <th class="p-3 text-right">PO QTY</th>
+                                        <th class="p-3 text-center">UOM</th>
+                                        <th class="p-3 text-right">Delivered / Remaining QTY</th>
+                                        <th class="p-3">Schedule Date</th>
+                                        <th class="p-3">Surat Jalan / Actual Date</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="po-table-body" class="divide-y divide-slate-100 font-medium">
+                                    <!-- Injected dynamically via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 3. PARTIAL DELIVERY TRACKING TAB -->
+                <section id="tab-partial" class="tab-content hidden space-y-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-800">Histori & Log Partial Delivery (Split Shipment)</h2>
+                            <p class="text-xs text-slate-500">Daftar riwayat riil pengiriman bertahap per Surat Jalan</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-100 text-slate-700 uppercase font-bold tracking-wider border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">Tgl Pengiriman Actual</th>
+                                        <th class="p-3">No. Surat Jalan</th>
+                                        <th class="p-3">Nomor PO</th>
+                                        <th class="p-3">Supplier</th>
+                                        <th class="p-3">Material</th>
+                                        <th class="p-3 text-right">Qty Terkirim</th>
+                                        <th class="p-3">Departemen</th>
+                                        <th class="p-3">Catatan / Driver</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="partial-history-table-body" class="divide-y divide-slate-100">
+                                    <!-- Injected via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 4. SETTING AKUN TAB (ADMIN ONLY) -->
+                <section id="tab-accounts" class="tab-content hidden space-y-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-800">Pengaturan Akun Pengguna</h2>
+                            <p class="text-xs text-slate-500">Kelola hak akses Akun Admin, Supplier, dan User Departemen</p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="downloadAccountTemplate()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition border border-slate-200">
+                                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+                                <span>Template Akun Excel</span>
+                            </button>
+                            <label class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition shadow-sm">
+                                <i data-lucide="upload" class="w-4 h-4"></i>
+                                <span>Upload Akun Excel</span>
+                                <input type="file" id="excel-account-file" accept=".xlsx, .xls" onchange="handleAccountExcelUpload(event)" class="hidden">
+                            </label>
+                            <button onclick="openAddAccountModal()" class="px-3 py-2 bg-isuzu-red hover:bg-isuzu-darkred text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-sm">
+                                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                                <span>Tambah Akun Baru</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ACCOUNT TABLE -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-100 text-slate-700 uppercase font-bold tracking-wider border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">ID Supplier / User</th>
+                                        <th class="p-3">Nama Lengkap / Enterprise</th>
+                                        <th class="p-3">Role Status</th>
+                                        <th class="p-3">Departemen</th>
+                                        <th class="p-3">Status Akun</th>
+                                        <th class="p-3 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="account-table-body" class="divide-y divide-slate-100 font-medium">
+                                    <!-- Injected via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+
+    <!-- MODALS SECTION -->
+
+    <!-- MODAL: UPDATE SCHEDULE DATE (SUPPLIER) -->
+    <div id="modal-update-schedule" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-4 h-4 text-isuzu-red"></i>
+                    <span>Update Schedule Delivery</span>
+                </h3>
+                <button onclick="closeModal('modal-update-schedule')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="form-update-schedule" onsubmit="handleScheduleSubmit(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="schedule-po-id">
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Nomor PO</label>
+                    <input type="text" id="schedule-po-no" disabled class="w-full p-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-700 font-bold">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Tanggal Schedule Baru (Estimasi Tiba)</label>
+                    <input type="date" id="schedule-date-input" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-isuzu-red">
+                    <p class="text-[10px] text-slate-400 mt-1">*Tanggal schedule akan dikirimkan ke PT MII untuk persetujuan (approval).</p>
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modal-update-schedule')" class="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg">Batal</button>
+                    <button type="submit" class="px-3 py-2 bg-isuzu-red text-white font-semibold rounded-lg hover:bg-isuzu-darkred">Ajukan Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- MODAL: ADD PARTIAL DELIVERY -->
+    <div id="modal-partial-delivery" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="truck" class="w-4 h-4 text-isuzu-red"></i>
+                    <span>Input Surat Jalan & Partial Delivery</span>
+                </h3>
+                <button onclick="closeModal('modal-partial-delivery')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="form-partial-delivery" onsubmit="handlePartialSubmit(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="partial-po-id">
+                
+                <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div>
+                        <span class="text-slate-500 block">Total PO QTY:</span>
+                        <strong id="partial-po-qty" class="text-slate-800 text-sm">0</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 block">Remaining QTY:</span>
+                        <strong id="partial-po-remaining" class="text-isuzu-red text-sm">0</strong>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Nomor Surat Jalan</label>
+                        <input type="text" id="partial-surat-jalan" required placeholder="SJ/AOP/2026/001" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Tanggal Actual Pengiriman</label>
+                        <input type="date" id="partial-actual-date" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Jumlah Terkirim (QTY)</label>
+                    <input type="number" id="partial-qty" min="1" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Catatan Kurir / Supir</label>
+                    <textarea id="partial-notes" rows="2" placeholder="Sopir Budi (B 9081 UXT)..." class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"></textarea>
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modal-partial-delivery')" class="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg">Batal</button>
+                    <button type="submit" class="px-3 py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700">Simpan Pengiriman</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- MODAL: VIEW PARTIAL HISTORY PER PO -->
+    <div id="modal-view-history" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="history" class="w-4 h-4 text-isuzu-red"></i>
+                    <span>Riwayat Pengiriman - <span id="history-po-no"></span></span>
+                </h3>
+                <button onclick="closeModal('modal-view-history')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-100 text-slate-700 uppercase font-bold">
+                        <tr>
+                            <th class="p-2.5">Tanggal</th>
+                            <th class="p-2.5">No Surat Jalan</th>
+                            <th class="p-2.5 text-right">Qty Terkirim</th>
+                            <th class="p-2.5">Catatan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-modal-table-body" class="divide-y divide-slate-100">
+                        <!-- Injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeModal('modal-view-history')" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold text-xs">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL: ADD / EDIT ACCOUNT -->
+    <div id="modal-account-form" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 id="account-modal-title" class="text-sm font-bold text-slate-800">Tambah Akun Pengguna Baru</h3>
+                <button onclick="closeModal('modal-account-form')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="form-account" onsubmit="handleAccountSave(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="account-edit-mode" value="add">
+                
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">ID Supplier / User</label>
+                    <input type="text" id="acc-id" required placeholder="SUP-1003 / DEPT-PROD" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Nama Supplier / User</label>
+                    <input type="text" id="acc-name" required placeholder="PT Vendor Presisi / PIC Production" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Password</label>
+                    <input type="text" id="acc-password" required placeholder="••••••••" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Role Akun</label>
+                    <select id="acc-role" onchange="toggleAccountDeptField()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                        <option value="supplier">Supplier</option>
+                        <option value="user_dept">User Departemen PT MII</option>
+                        <option value="admin">Admin PT MII</option>
+                    </select>
+                </div>
+
+                <div id="acc-dept-container">
+                    <label class="block font-semibold text-slate-600 mb-1">Departemen Penerima</label>
+                    <select id="acc-dept" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                        <option value="INDIRECT PURCHASING">INDIRECT PURCHASING</option>
+                        <option value="MAINTENANCE">MAINTENANCE</option>
+                        <option value="PRODUCTION">PRODUCTION</option>
+                        <option value="GA">GA</option>
+                    </select>
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modal-account-form')" class="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg">Batal</button>
+                    <button type="submit" class="px-3 py-2 bg-isuzu-red text-white font-semibold rounded-lg hover:bg-isuzu-darkred">Simpan Akun</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT LOGIC & STATE MANAGEMENT -->
+    <script>
+        // --- DATA STATE AND LOCAL STORAGE INITIALIZATION ---
+        const STORAGE_KEY_ACCOUNTS = 'MII_ACCOUNTS_V1';
+        const STORAGE_KEY_POS = 'MII_POS_V1';
+
+        let currentUser = null;
+        let accounts = [];
+        let poData = [];
+        let filteredPOData = [];
+
+        // Dynamic Chart Handles
+        let chartSupplier = null;
+        let chartDept = null;
+
+        // Default Seed Accounts
+        const seedAccounts = [
+            { id: 'ADMIN-MII', name: 'Admin Indirect Purchasing PT MII', password: 'admin123', role: 'admin', dept: 'INDIRECT PURCHASING', active: true },
+            { id: 'SUP-1001', name: 'PT Astra Otoparts Tbk', password: 'supplier123', role: 'supplier', dept: '-', active: true },
+            { id: 'SUP-1002', name: 'PT Metal Presisi Indonesia', password: 'supplier123', role: 'supplier', dept: '-', active: true },
+            { id: 'DEPT-MAINT', name: 'PIC Maintenance - Budi S.', password: 'user123', role: 'user_dept', dept: 'MAINTENANCE', active: true },
+            { id: 'DEPT-INDIRECT', name: 'PIC Indirect Purchasing - Anita', password: 'user123', role: 'user_dept', dept: 'INDIRECT PURCHASING', active: true },
+            { id: 'DEPT-PROD', name: 'PIC Production - Eko W.', password: 'user123', role: 'user_dept', dept: 'PRODUCTION', active: true },
+            { id: 'DEPT-GA', name: 'PIC GA - Rina M.', password: 'user123', role: 'user_dept', dept: 'GA', active: true }
+        ];
+
+        // Format today's date YYYY-MM-DD helper
+        function getFormattedDate(offsetDays = 0) {
+            const d = new Date();
+            d.setDate(d.getDate() + offsetDays);
+            return d.toISOString().split('T')[0];
+        }
+
+        // Default Seed PO Data
+        const seedPOs = [
+            {
+                id: 'PO-001',
+                poNumber: 'PO/MII/2026/0101',
+                poDate: getFormattedDate(-10),
+                poReleaseEmailDate: getFormattedDate(-9),
+                supplierCode: 'SUP-1001',
+                supplierName: 'PT Astra Otoparts Tbk',
+                picReceiver: 'Budi S.',
+                deptReceiver: 'MAINTENANCE',
+                materialCodeDesc: 'MTR-CNC-001 - Cutting Tool Inserts High Speed',
+                poQty: 500,
+                uom: 'PCS',
+                scheduleDate: getFormattedDate(0), // Today
+                actualDate: '',
+                status: 'Schedule Approved',
+                partialDeliveries: [
+                    { id: 'PD-1', date: getFormattedDate(-2), suratJalan: 'SJ/AOP/2026/8891', qty: 200, notes: 'Tahap 1 dikirim via Pick-up' }
+                ]
+            },
+            {
+                id: 'PO-002',
+                poNumber: 'PO/MII/2026/0102',
+                poDate: getFormattedDate(-8),
+                poReleaseEmailDate: getFormattedDate(-7),
+                supplierCode: 'SUP-1002',
+                supplierName: 'PT Metal Presisi Indonesia',
+                picReceiver: 'Eko W.',
+                deptReceiver: 'PRODUCTION',
+                materialCodeDesc: 'RAW-STL-402 - Steel Sheet Metal 2.0mm',
+                poQty: 1200,
+                uom: 'SHEET',
+                scheduleDate: getFormattedDate(0), // Today
+                actualDate: '',
+                status: 'Awaiting PT MII Approval',
+                partialDeliveries: []
+            },
+            {
+                id: 'PO-003',
+                poNumber: 'PO/MII/2026/0103',
+                poDate: getFormattedDate(-15),
+                poReleaseEmailDate: getFormattedDate(-14),
+                supplierCode: 'SUP-1001',
+                supplierName: 'PT Astra Otoparts Tbk',
+                picReceiver: 'Anita',
+                deptReceiver: 'INDIRECT PURCHASING',
+                materialCodeDesc: 'OFF-STN-088 - A4 Paper 80gsm High Grade',
+                poQty: 100,
+                uom: 'BOX',
+                scheduleDate: getFormattedDate(-5),
+                actualDate: getFormattedDate(-4),
+                status: 'Closed / Full Delivered',
+                partialDeliveries: [
+                    { id: 'PD-2', date: getFormattedDate(-4), suratJalan: 'SJ/AOP/2026/8710', qty: 100, notes: 'Lunas 100% full delivery' }
+                ]
+            },
+            {
+                id: 'PO-004',
+                poNumber: 'PO/MII/2026/0104',
+                poDate: getFormattedDate(-4),
+                poReleaseEmailDate: getFormattedDate(-3),
+                supplierCode: 'SUP-1002',
+                supplierName: 'PT Metal Presisi Indonesia',
+                picReceiver: 'Rina M.',
+                deptReceiver: 'GA',
+                materialCodeDesc: 'SAF-GLV-005 - Safety Gloves Heavy Duty',
+                poQty: 300,
+                uom: 'PAIR',
+                scheduleDate: getFormattedDate(3),
+                actualDate: '',
+                status: 'Draft Schedule',
+                partialDeliveries: []
+            },
+            {
+                id: 'PO-005',
+                poNumber: 'PO/MII/2026/0105',
+                poDate: getFormattedDate(-12),
+                poReleaseEmailDate: getFormattedDate(-11),
+                supplierCode: 'SUP-1001',
+                supplierName: 'PT Astra Otoparts Tbk',
+                picReceiver: 'Budi S.',
+                deptReceiver: 'MAINTENANCE',
+                materialCodeDesc: 'HYD-OIL-220 - Industrial Hydraulic Oil ISO 68',
+                poQty: 10,
+                uom: 'DRUM',
+                scheduleDate: getFormattedDate(-3),
+                actualDate: '',
+                status: 'Delayed',
+                partialDeliveries: []
+            }
+        ];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initData();
+            lucide.createIcons();
+            setTodayBadgeDate();
+        });
+
+        function initData() {
+            const storedAcc = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
+            const storedPO = localStorage.getItem(STORAGE_KEY_POS);
+
+            accounts = storedAcc ? JSON.parse(storedAcc) : seedAccounts;
+            poData = storedPO ? JSON.parse(storedPO) : seedPOs;
+
+            if (!storedAcc) localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(accounts));
+            if (!storedPO) localStorage.setItem(STORAGE_KEY_POS, JSON.stringify(poData));
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(accounts));
+            localStorage.setItem(STORAGE_KEY_POS, JSON.stringify(poData));
+        }
+
+        function setTodayBadgeDate() {
+            const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+            document.getElementById('today-date-badge').innerText = new Date().toLocaleDateString('id-ID', options);
+        }
+
+        // --- LOGIN & AUTHENTICATION ---
+        function fillLogin(id, pass) {
+            document.getElementById('login-id').value = id;
+            document.getElementById('login-password').value = pass;
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const idInput = document.getElementById('login-id').value.trim();
+            const passInput = document.getElementById('login-password').value.trim();
+            const errorEl = document.getElementById('login-error');
+
+            const foundAcc = accounts.find(a => a.id.toLowerCase() === idInput.toLowerCase() && a.password === passInput);
+
+            if (!foundAcc) {
+                errorEl.classList.remove('hidden');
+                document.getElementById('login-error-msg').innerText = 'ID Pengguna atau Password salah!';
+                return;
+            }
+
+            if (!foundAcc.active) {
+                errorEl.classList.remove('hidden');
+                document.getElementById('login-error-msg').innerText = 'Akun Anda dinonaktifkan oleh Admin!';
+                return;
+            }
+
+            errorEl.classList.add('hidden');
+            currentUser = foundAcc;
+
+            // Setup UI for Logged In User
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('user-display-name').innerText = currentUser.name;
+            document.getElementById('user-role-badge').innerText = currentUser.role.toUpperCase();
+            document.getElementById('user-dept-badge').innerText = currentUser.dept || '-';
+
+            // Role specific visibility
+            if (currentUser.role === 'admin') {
+                document.getElementById('admin-nav-section').classList.remove('hidden');
+                document.getElementById('admin-po-actions').classList.remove('hidden');
+            } else {
+                document.getElementById('admin-nav-section').classList.add('hidden');
+                document.getElementById('admin-po-actions').classList.add('hidden');
+            }
+
+            switchTab('dashboard');
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('login-form').reset();
+        }
+
+        // --- NAVIGATION & TABS ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-red-50', 'text-isuzu-red');
+                btn.classList.add('text-slate-600');
+            });
+
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            const activeNav = document.getElementById(`nav-${tabName}`);
+
+            if (activeTab) activeTab.classList.remove('hidden');
+            if (activeNav) {
+                activeNav.classList.add('bg-red-50', 'text-isuzu-red');
+                activeNav.classList.remove('text-slate-600');
+            }
+
+            if (tabName === 'dashboard') {
+                renderDashboard();
+            } else if (tabName === 'po') {
+                applyPOFilters();
+            } else if (tabName === 'partial') {
+                renderPartialHistoryTable();
+            } else if (tabName === 'accounts') {
+                renderAccountTable();
+            }
+            lucide.createIcons();
+        }
+
+
+        // --- PO DATA COMPUTATIONS & CALCULATIONS ---
+        function getDeliveredQty(po) {
+            if (!po.partialDeliveries || po.partialDeliveries.length === 0) return 0;
+            return po.partialDeliveries.reduce((sum, item) => sum + Number(item.qty), 0);
+        }
+
+        function calculateLeadTime(po) {
+            if (po.status !== 'Closed / Full Delivered' || !po.actualDate || !po.poReleaseEmailDate) return null;
+            const release = new Date(po.poReleaseEmailDate);
+            const actual = new Date(po.actualDate);
+            const diffTime = actual - release;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays >= 0 ? diffDays : 0;
+        }
+
+
+        // --- DASHBOARD RENDER & CHARTS ---
+        function renderDashboard() {
+            // Filter POs based on logged in user role
+            let userAccessiblePOs = poData;
+            if (currentUser.role === 'supplier') {
+                userAccessiblePOs = poData.filter(p => p.supplierCode === currentUser.id);
+            } else if (currentUser.role === 'user_dept') {
+                userAccessiblePOs = poData.filter(p => p.deptReceiver === currentUser.dept);
+            }
+
+            // 1. Schedule Delivery By Today List
+            const todayStr = getFormattedDate(0);
+            const todayPOs = userAccessiblePOs.filter(p => p.scheduleDate === todayStr && p.status !== 'Closed / Full Delivered');
+            const todayListContainer = document.getElementById('today-delivery-list');
+            
+            if (todayPOs.length === 0) {
+                todayListContainer.innerHTML = `
+                    <div class="col-span-2 bg-white/10 p-3 rounded-xl backdrop-blur-md text-xs text-red-50 text-center">
+                        Tidak ada jadwal pengiriman material untuk hari ini.
+                    </div>
+                `;
+            } else {
+                todayListContainer.innerHTML = todayPOs.map(po => `
+                    <div class="bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/20 text-xs flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-white">${po.poNumber} - ${po.materialCodeDesc}</div>
+                            <div class="text-red-100">${po.supplierName} | Dept: <strong>${po.deptReceiver}</strong> (PIC: ${po.picReceiver})</div>
+                        </div>
+                        <span class="px-2 py-1 bg-white text-isuzu-red font-bold rounded-lg text-[10px] shrink-0">
+                            QTY: ${po.poQty} ${po.uom}
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            // 2. KPI Summary Updates
+            document.getElementById('kpi-total-po').innerText = userAccessiblePOs.length;
+            
+            const awaitingCount = userAccessiblePOs.filter(p => p.status === 'Awaiting PT MII Approval').length;
+            document.getElementById('kpi-awaiting-approval').innerText = awaitingCount;
+
+            // OTD Rate (% of closed items delivered on or before schedule date)
+            const closedPOs = userAccessiblePOs.filter(p => p.status === 'Closed / Full Delivered');
+            if (closedPOs.length > 0) {
+                const onTimeCount = closedPOs.filter(p => new Date(p.actualDate) <= new Date(p.scheduleDate)).length;
+                const otdRate = Math.round((onTimeCount / closedPOs.length) * 100);
+                document.getElementById('kpi-otd-rate').innerText = `${otdRate}%`;
+            } else {
+                document.getElementById('kpi-otd-rate').innerText = '100%';
+            }
+
+            // Average Lead Time
+            const leadTimes = closedPOs.map(p => calculateLeadTime(p)).filter(lt => lt !== null);
+            if (leadTimes.length > 0) {
+                const avgLt = (leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length).toFixed(1);
+                document.getElementById('kpi-avg-leadtime').innerText = `${avgLt} Hari`;
+            } else {
+                document.getElementById('kpi-avg-leadtime').innerText = '0 Hari';
+            }
+
+            // Render Chart.js Performance Graphics
+            renderCharts(userAccessiblePOs);
+        }
+
+        function renderCharts(poList) {
+            // Chart 1: Supplier OTD Performance
+            const supplierMap = {};
+            poList.forEach(po => {
+                if (!supplierMap[po.supplierName]) {
+                    supplierMap[po.supplierName] = { total: 0, closed: 0, onTime: 0 };
+                }
+                supplierMap[po.supplierName].total++;
+                if (po.status === 'Closed / Full Delivered') {
+                    supplierMap[po.supplierName].closed++;
+                    if (new Date(po.actualDate) <= new Date(po.scheduleDate)) {
+                        supplierMap[po.supplierName].onTime++;
+                    }
+                }
+            });
+
+            const supplierNames = Object.keys(supplierMap);
+            const otdPercentages = supplierNames.map(name => {
+                const s = supplierMap[name];
+                return s.closed > 0 ? Math.round((s.onTime / s.closed) * 100) : 100;
+            });
+
+            const ctxSupplier = document.getElementById('chart-supplier-performance').getContext('2d');
+            if (chartSupplier) chartSupplier.destroy();
+            chartSupplier = new Chart(ctxSupplier, {
+                type: 'bar',
+                data: {
+                    labels: supplierNames.length > 0 ? supplierNames : ['Belum ada Data'],
+                    datasets: [{
+                        label: 'OTD Delivery Performance (%)',
+                        data: otdPercentages.length > 0 ? otdPercentages : [0],
+                        backgroundColor: '#DC2626',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+
+            // Chart 2: Lead Time Trend by Department
+            const depts = ['INDIRECT PURCHASING', 'MAINTENANCE', 'PRODUCTION', 'GA'];
+            const deptAvgLeadTime = depts.map(d => {
+                const deptClosedPOs = poList.filter(p => p.deptReceiver === d && p.status === 'Closed / Full Delivered');
+                const lts = deptClosedPOs.map(p => calculateLeadTime(p)).filter(l => l !== null);
+                return lts.length > 0 ? (lts.reduce((a, b) => a + b, 0) / lts.length).toFixed(1) : 0;
+            });
+
+            const ctxDept = document.getElementById('chart-dept-leadtime').getContext('2d');
+            if (chartDept) chartDept.destroy();
+            chartDept = new Chart(ctxDept, {
+                type: 'line',
+                data: {
+                    labels: depts,
+                    datasets: [{
+                        label: 'Lead Time Rata-rata (Hari)',
+                        data: deptAvgLeadTime,
+                        borderColor: '#1F2937',
+                        backgroundColor: 'rgba(31, 41, 55, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#DC2626',
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+
+        // --- PO TABLE FILTER & RENDERING ---
+        function applyPOFilters() {
+            const searchVal = document.getElementById('filter-search').value.toLowerCase();
+            const startDate = document.getElementById('filter-start-date').value;
+            const endDate = document.getElementById('filter-end-date').value;
+            const deptVal = document.getElementById('filter-dept').value;
+            const statusVal = document.getElementById('filter-status').value;
+
+            filteredPOData = poData.filter(po => {
+                // Access constraint check
+                if (currentUser.role === 'supplier' && po.supplierCode !== currentUser.id) return false;
+                if (currentUser.role === 'user_dept' && po.deptReceiver !== currentUser.dept) return false;
+
+                // Search query matching
+                const matchesSearch = po.poNumber.toLowerCase().includes(searchVal) ||
+                                      po.supplierName.toLowerCase().includes(searchVal) ||
+                                      po.materialCodeDesc.toLowerCase().includes(searchVal) ||
+                                      po.picReceiver.toLowerCase().includes(searchVal);
+
+                // Date filter matching
+                let matchesDate = true;
+                if (startDate && po.scheduleDate < startDate) matchesDate = false;
+                if (endDate && po.scheduleDate > endDate) matchesDate = false;
+
+                // Dept & Status filter matching
+                const matchesDept = deptVal === '' || po.deptReceiver === deptVal;
+                const matchesStatus = statusVal === '' || po.status === statusVal;
+
+                return matchesSearch && matchesDate && matchesDept && matchesStatus;
+            });
+
+            renderPOTable();
+        }
+
+        function renderPOTable() {
+            const tbody = document.getElementById('po-table-body');
+            tbody.innerHTML = '';
+
+            if (filteredPOData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="15" class="p-8 text-center text-slate-400">
+                            Tidak ditemukan data Purchase Order yang sesuai dengan filter.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filteredPOData.forEach(po => {
+                const deliveredQty = getDeliveredQty(po);
+                const remainingQty = po.poQty - deliveredQty;
+
+                // Status Badge Color Helper
+                let statusBadgeClass = 'bg-slate-100 text-slate-700';
+                if (po.status === 'Draft Schedule') statusBadgeClass = 'bg-gray-100 text-gray-700 border border-gray-300';
+                else if (po.status === 'Awaiting PT MII Approval') statusBadgeClass = 'bg-amber-100 text-amber-800 border border-amber-300';
+                else if (po.status === 'Schedule Approved') statusBadgeClass = 'bg-blue-100 text-blue-800 border border-blue-300';
+                else if (po.status === 'Partial Delivered') statusBadgeClass = 'bg-purple-100 text-purple-800 border border-purple-300';
+                else if (po.status === 'Closed / Full Delivered') statusBadgeClass = 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+                else if (po.status === 'Delayed') statusBadgeClass = 'bg-red-100 text-red-800 border border-red-300';
+
+                // Contextual Actions Buttons
+                let actionHtml = '';
+
+                // 1. Supplier Actions
+                if (currentUser.role === 'supplier') {
+                    if (po.status === 'Draft Schedule' || po.status === 'Delayed') {
+                        actionHtml += `
+                            <button onclick="openScheduleModal('${po.id}')" class="px-2.5 py-1 bg-isuzu-red hover:bg-isuzu-darkred text-white font-semibold rounded text-[11px] transition shadow-sm mb-1 w-full">
+                                Ajukan Schedule
+                            </button>
+                        `;
+                    }
+                    if (po.status === 'Schedule Approved' || po.status === 'Partial Delivered') {
+                        actionHtml += `
+                            <button onclick="openPartialModal('${po.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded text-[11px] transition shadow-sm mb-1 w-full">
+                                + Partial Delivery
+                            </button>
+                        `;
+                    }
+                }
+
+                // 2. Admin PT MII Approval Actions
+                if (currentUser.role === 'admin') {
+                    if (po.status === 'Awaiting PT MII Approval') {
+                        actionHtml += `
+                            <button onclick="approveSchedule('${po.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded text-[11px] transition shadow-sm mb-1 w-full">
+                                Setujui Schedule
+                            </button>
+                            <button onclick="rejectSchedule('${po.id}')" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-[11px] transition shadow-sm mb-1 w-full">
+                                Tolak / Re-schedule
+                            </button>
+                        `;
+                    }
+                    if (po.status === 'Schedule Approved' || po.status === 'Partial Delivered') {
+                        actionHtml += `
+                            <button onclick="openPartialModal('${po.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded text-[11px] transition shadow-sm mb-1 w-full">
+                                + Partial Delivery
+                            </button>
+                        `;
+                    }
+                }
+
+                // Always allow viewing history if partial deliveries exist
+                if (po.partialDeliveries && po.partialDeliveries.length > 0) {
+                    actionHtml += `
+                        <button onclick="openViewHistoryModal('${po.id}')" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] transition border border-slate-300 w-full">
+                            Lihat Histori (${po.partialDeliveries.length})
+                        </button>
+                    `;
+                }
+
+                if (!actionHtml) {
+                    actionHtml = '<span class="text-slate-400 text-[11px]">-</span>';
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition border-b border-slate-100';
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-800">${po.poNumber}</td>
+                    <td class="p-3 text-slate-600 whitespace-nowrap">${po.poDate}</td>
+                    <td class="p-3 text-slate-600 whitespace-nowrap">${po.poReleaseEmailDate}</td>
+                    <td class="p-3 font-mono text-slate-600">${po.supplierCode}</td>
+                    <td class="p-3 font-semibold text-slate-800">${po.supplierName}</td>
+                    <td class="p-3 text-slate-700">${po.picReceiver}</td>
+                    <td class="p-3 font-medium text-slate-700">${po.deptReceiver}</td>
+                    <td class="p-3 text-slate-800 max-w-xs truncate" title="${po.materialCodeDesc}">${po.materialCodeDesc}</td>
+                    <td class="p-3 text-right font-bold text-slate-800">${po.poQty}</td>
+                    <td class="p-3 text-center text-slate-500">${po.uom}</td>
+                    <td class="p-3 text-right whitespace-nowrap">
+                        <span class="text-emerald-700 font-bold">${deliveredQty}</span> / 
+                        <span class="text-isuzu-red font-bold">${remainingQty}</span>
+                    </td>
+                    <td class="p-3 font-medium text-slate-800 whitespace-nowrap">${po.scheduleDate || '-'}</td>
+                    <td class="p-3 text-slate-600 whitespace-nowrap">${po.actualDate || '-'}</td>
+                    <td class="p-3 whitespace-nowrap">
+                        <span class="px-2 py-1 rounded-full text-[10px] font-bold ${statusBadgeClass}">
+                            ${po.status}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center whitespace-nowrap">${actionHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+
+        // --- SCHEDULE UPDATE & APPROVAL WORKFLOW ---
+        function openScheduleModal(poId) {
+            const po = poData.find(p => p.id === poId);
+            if (!po) return;
+
+            document.getElementById('schedule-po-id').value = po.id;
+            document.getElementById('schedule-po-no').value = po.poNumber;
+            document.getElementById('schedule-date-input').value = po.scheduleDate || getFormattedDate(2);
+            document.getElementById('modal-update-schedule').classList.remove('hidden');
+        }
+
+        function handleScheduleSubmit(e) {
+            e.preventDefault();
+            const poId = document.getElementById('schedule-po-id').value;
+            const newDate = document.getElementById('schedule-date-input').value;
+
+            const po = poData.find(p => p.id === poId);
+            if (po) {
+                po.scheduleDate = newDate;
+                po.status = 'Awaiting PT MII Approval';
+                saveData();
+                closeModal('modal-update-schedule');
+                applyPOFilters();
+                alert(`Schedule pengiriman untuk ${po.poNumber} berhasil diajukan! Menunggu approval Admin PT MII.`);
+            }
+        }
+
+        function approveSchedule(poId) {
+            const po = poData.find(p => p.id === poId);
+            if (po) {
+                po.status = 'Schedule Approved';
+                saveData();
+                applyPOFilters();
+            }
+        }
+
+        function rejectSchedule(poId) {
+            const po = poData.find(p => p.id === poId);
+            if (po) {
+                po.status = 'Draft Schedule';
+                saveData();
+                applyPOFilters();
+            }
+        }
+
+
+        // --- PARTIAL DELIVERY SPLIT SHIPMENT LOGIC ---
+        function openPartialModal(poId) {
+            const po = poData.find(p => p.id === poId);
+            if (!po) return;
+
+            const delivered = getDeliveredQty(po);
+            const remaining = po.poQty - delivered;
+
+            document.getElementById('partial-po-id').value = po.id;
+            document.getElementById('partial-po-qty').innerText = `${po.poQty} ${po.uom}`;
+            document.getElementById('partial-po-remaining').innerText = `${remaining} ${po.uom}`;
+            document.getElementById('partial-surat-jalan').value = '';
+            document.getElementById('partial-actual-date').value = getFormattedDate(0);
+            document.getElementById('partial-qty').value = remaining;
+            document.getElementById('partial-qty').max = remaining;
+
+            document.getElementById('modal-partial-delivery').classList.remove('hidden');
+        }
+
+        function handlePartialSubmit(e) {
+            e.preventDefault();
+            const poId = document.getElementById('partial-po-id').value;
+            const suratJalan = document.getElementById('partial-surat-jalan').value.trim();
+            const actualDate = document.getElementById('partial-actual-date').value;
+            const qtySubmitted = Number(document.getElementById('partial-qty').value);
+            const notes = document.getElementById('partial-notes').value.trim();
+
+            const po = poData.find(p => p.id === poId);
+            if (!po) return;
+
+            const currentDelivered = getDeliveredQty(po);
+            const remainingBefore = po.poQty - currentDelivered;
+
+            if (qtySubmitted > remainingBefore) {
+                alert(`Jumlah terkirim (${qtySubmitted}) melebihi sisa PO QTY (${remainingBefore})!`);
+                return;
+            }
+
+            if (!po.partialDeliveries) po.partialDeliveries = [];
+            po.partialDeliveries.push({
+                id: 'PD-' + Date.now(),
+                date: actualDate,
+                suratJalan: suratJalan,
+                qty: qtySubmitted,
+                notes: notes
+            });
+
+            po.actualDate = actualDate;
+
+            const totalDeliveredNow = currentDelivered + qtySubmitted;
+            if (totalDeliveredNow >= po.poQty) {
+                po.status = 'Closed / Full Delivered';
+            } else {
+                po.status = 'Partial Delivered';
+            }
+
+            saveData();
+            closeModal('modal-partial-delivery');
+            applyPOFilters();
+        }
+
+        function openViewHistoryModal(poId) {
+            const po = poData.find(p => p.id === poId);
+            if (!po) return;
+
+            document.getElementById('history-po-no').innerText = po.poNumber;
+            const tbody = document.getElementById('history-modal-table-body');
+            tbody.innerHTML = '';
+
+            if (!po.partialDeliveries || po.partialDeliveries.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada catatan pengiriman.</td></tr>`;
+            } else {
+                po.partialDeliveries.forEach(pd => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-slate-100';
+                    tr.innerHTML = `
+                        <td class="p-2.5 text-slate-600">${pd.date}</td>
+                        <td class="p-2.5 font-bold text-slate-800">${pd.suratJalan}</td>
+                        <td class="p-2.5 text-right font-bold text-emerald-600">${pd.qty} ${po.uom}</td>
+                        <td class="p-2.5 text-slate-500">${pd.notes || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            document.getElementById('modal-view-history').classList.remove('hidden');
+        }
+
+        function renderPartialHistoryTable() {
+            const tbody = document.getElementById('partial-history-table-body');
+            tbody.innerHTML = '';
+
+            let allPartials = [];
+            poData.forEach(po => {
+                if (currentUser.role === 'supplier' && po.supplierCode !== currentUser.id) return;
+                if (currentUser.role === 'user_dept' && po.deptReceiver !== currentUser.dept) return;
+
+                if (po.partialDeliveries && po.partialDeliveries.length > 0) {
+                    po.partialDeliveries.forEach(pd => {
+                        allPartials.push({
+                            ...pd,
+                            poNumber: po.poNumber,
+                            supplierName: po.supplierName,
+                            material: po.materialCodeDesc,
+                            dept: po.deptReceiver,
+                            uom: po.uom
+                        });
+                    });
+                }
+            });
+
+            if (allPartials.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">Belum ada riwayat partial delivery.</td></tr>`;
+                return;
+            }
+
+            allPartials.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            allPartials.forEach(pd => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 border-b border-slate-100';
+                tr.innerHTML = `
+                    <td class="p-3 text-slate-600 font-medium">${pd.date}</td>
+                    <td class="p-3 font-bold text-slate-800">${pd.suratJalan}</td>
+                    <td class="p-3 font-semibold text-slate-700">${pd.poNumber}</td>
+                    <td class="p-3 text-slate-600">${pd.supplierName}</td>
+                    <td class="p-3 text-slate-700 truncate max-w-xs">${pd.material}</td>
+                    <td class="p-3 text-right font-bold text-emerald-600">${pd.qty} ${pd.uom}</td>
+                    <td class="p-3 font-medium text-slate-700">${pd.dept}</td>
+                    <td class="p-3 text-slate-500 text-[11px]">${pd.notes || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+
+        // --- ACCOUNT MANAGEMENT TAB (ADMIN) ---
+        function renderAccountTable() {
+            const tbody = document.getElementById('account-table-body');
+            tbody.innerHTML = '';
+
+            accounts.forEach(acc => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 border-b border-slate-100';
+                tr.innerHTML = `
+                    <td class="p-3 font-mono font-bold text-slate-800">${acc.id}</td>
+                    <td class="p-3 font-semibold text-slate-700">${acc.name}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${acc.role === 'admin' ? 'bg-red-100 text-isuzu-red' : acc.role === 'supplier' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}">
+                            ${acc.role.toUpperCase()}
+                        </span>
+                    </td>
+                    <td class="p-3 text-slate-600">${acc.dept || '-'}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${acc.active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">
+                            ${acc.active ? 'Aktif' : 'Non-Aktif'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center space-x-1">
+                        <button onclick="toggleAccountStatus('${acc.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] border border-slate-300">
+                            ${acc.active ? 'Nonaktifkan' : 'Aktifkan'}
+                        </button>
+                        <button onclick="openEditAccountModal('${acc.id}')" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-[10px] border border-blue-200">
+                            Edit
+                        </button>
+                        <button onclick="deleteAccount('${acc.id}')" class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded text-[10px] border border-red-200">
+                            Hapus
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        function openAddAccountModal() {
+            document.getElementById('account-modal-title').innerText = 'Tambah Akun Pengguna Baru';
+            document.getElementById('account-edit-mode').value = 'add';
+            document.getElementById('acc-id').disabled = false;
+            document.getElementById('form-account').reset();
+            toggleAccountDeptField();
+            document.getElementById('modal-account-form').classList.remove('hidden');
+        }
+
+        function openEditAccountModal(accId) {
+            const acc = accounts.find(a => a.id === accId);
+            if (!acc) return;
+
+            document.getElementById('account-modal-title').innerText = 'Edit Akun Pengguna';
+            document.getElementById('account-edit-mode').value = 'edit';
+            document.getElementById('acc-id').value = acc.id;
+            document.getElementById('acc-id').disabled = true;
+            document.getElementById('acc-name').value = acc.name;
+            document.getElementById('acc-password').value = acc.password;
+            document.getElementById('acc-role').value = acc.role;
+            document.getElementById('acc-dept').value = acc.dept || 'INDIRECT PURCHASING';
+
+            toggleAccountDeptField();
+            document.getElementById('modal-account-form').classList.remove('hidden');
+        }
+
+        function toggleAccountDeptField() {
+            const role = document.getElementById('acc-role').value;
+            const container = document.getElementById('acc-dept-container');
+            if (role === 'supplier') {
+                container.classList.add('hidden');
+            } else {
+                container.classList.remove('hidden');
+            }
+        }
+
+        function handleAccountSave(e) {
+            e.preventDefault();
+            const mode = document.getElementById('account-edit-mode').value;
+            const id = document.getElementById('acc-id').value.trim();
+            const name = document.getElementById('acc-name').value.trim();
+            const password = document.getElementById('acc-password').value.trim();
+            const role = document.getElementById('acc-role').value;
+            const dept = role === 'supplier' ? '-' : document.getElementById('acc-dept').value;
+
+            if (mode === 'add') {
+                if (accounts.some(a => a.id.toLowerCase() === id.toLowerCase())) {
+                    alert('ID Pengguna / Supplier ini sudah terdaftar!');
+                    return;
+                }
+                accounts.push({ id, name, password, role, dept, active: true });
+            } else {
+                const acc = accounts.find(a => a.id === id);
+                if (acc) {
+                    acc.name = name;
+                    acc.password = password;
+                    acc.role = role;
+                    acc.dept = dept;
+                }
+            }
+
+            saveData();
+            closeModal('modal-account-form');
+            renderAccountTable();
+        }
+
+        function toggleAccountStatus(accId) {
+            const acc = accounts.find(a => a.id === accId);
+            if (acc) {
+                acc.active = !acc.active;
+                saveData();
+                renderAccountTable();
+            }
+        }
+
+        function deleteAccount(accId) {
+            if (accId === 'ADMIN-MII') {
+                alert('Akun Admin Utamanya tidak dapat dihapus!');
+                return;
+            }
+            accounts = accounts.filter(a => a.id !== accId);
+            saveData();
+            renderAccountTable();
+        }
+
+
+        // --- EXCEL IMPORT & EXPORT (SHEETJS) ---
+        function downloadPOTemplate() {
+            const templateData = [
+                {
+                    'Nomor PO': 'PO/MII/2026/0201',
+                    'Tanggal PO': '2026-09-20',
+                    'Tanggal Purchasing Rilis PO by Email': '2026-09-21',
+                    'Kode Supplier': 'SUP-1001',
+                    'Nama Supplier': 'PT Astra Otoparts Tbk',
+                    'PIC Penerima': 'Anita',
+                    'Departemen Penerima': 'INDIRECT PURCHASING',
+                    'Material Kode & Deskripsi': 'OFF-STN-090 - Cartridge Toner HP LaserJet',
+                    'PO QTY': 50,
+                    'UOM': 'PCS'
+                }
+            ];
+
+            const ws = XLSX.utils.json_to_sheet(templateData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Template_PO");
+            XLSX.writeFile(wb, "Template_Upload_PO_PT_MII.xlsx");
+        }
+
+        function handlePOExcelUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+
+                    let addedCount = 0;
+                    json.forEach(row => {
+                        const poNum = row['Nomor PO'];
+                        if (poNum && !poData.some(p => p.poNumber === poNum)) {
+                            poData.push({
+                                id: 'PO-' + Date.now() + Math.floor(Math.random() * 100),
+                                poNumber: poNum,
+                                poDate: row['Tanggal PO'] || getFormattedDate(0),
+                                poReleaseEmailDate: row['Tanggal Purchasing Rilis PO by Email'] || getFormattedDate(0),
+                                supplierCode: row['Kode Supplier'] || 'SUP-1001',
+                                supplierName: row['Nama Supplier'] || 'PT Astra Otoparts Tbk',
+                                picReceiver: row['PIC Penerima'] || 'Admin',
+                                deptReceiver: row['Departemen Penerima'] || 'INDIRECT PURCHASING',
+                                materialCodeDesc: row['Material Kode & Deskripsi'] || 'Material General',
+                                poQty: Number(row['PO QTY']) || 100,
+                                uom: row['UOM'] || 'PCS',
+                                scheduleDate: '',
+                                actualDate: '',
+                                status: 'Draft Schedule',
+                                partialDeliveries: []
+                            });
+                            addedCount++;
+                        }
+                    });
+
+                    saveData();
+                    applyPOFilters();
+                    alert(`Berhasil mengimpor ${addedCount} data PO dari Excel!`);
+                } catch (err) {
+                    alert('Gagal membaca file Excel. Pastikan format file sesuai template!');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            e.target.value = '';
+        }
+
+        function downloadAccountTemplate() {
+            const templateAccount = [
+                {
+                    'ID Supplier / User': 'SUP-1003',
+                    'Nama Supplier / User': 'PT Vendor Mold Presisi',
+                    'Password': 'supplier123',
+                    'Role': 'supplier',
+                    'Departemen': '-'
+                },
+                {
+                    'ID Supplier / User': 'DEPT-GA-02',
+                    'Nama Supplier / User': 'PIC GA Facilities',
+                    'Password': 'user123',
+                    'Role': 'user_dept',
+                    'Departemen': 'GA'
+                }
+            ];
+
+            const ws = XLSX.utils.json_to_sheet(templateAccount);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Template_Akun");
+            XLSX.writeFile(wb, "Template_Upload_Akun_PT_MII.xlsx");
+        }
+
+        function handleAccountExcelUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+
+                    let addedAccCount = 0;
+                    json.forEach(row => {
+                        const accId = row['ID Supplier / User'];
+                        if (accId && !accounts.some(a => a.id.toLowerCase() === String(accId).toLowerCase())) {
+                            accounts.push({
+                                id: String(accId),
+                                name: row['Nama Supplier / User'] || 'User New',
+                                password: String(row['Password'] || '123456'),
+                                role: row['Role'] || 'supplier',
+                                dept: row['Departemen'] || '-',
+                                active: true
+                            });
+                            addedAccCount++;
+                        }
+                    });
+
+                    saveData();
+                    renderAccountTable();
+                    alert(`Berhasil mengimpor ${addedAccCount} akun pengguna dari Excel!`);
+                } catch (err) {
+                    alert('Gagal mengimpor file akun. Pastikan kolom sesuai template!');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            e.target.value = '';
+        }
+
+        function exportPOToExcel() {
+            const exportRows = filteredPOData.map(po => {
+                const delivered = getDeliveredQty(po);
+                const remaining = po.poQty - delivered;
+                return {
+                    'Nomor PO': po.poNumber,
+                    'Tanggal PO': po.poDate,
+                    'Tanggal Purchasing Rilis PO by Email': po.poReleaseEmailDate,
+                    'Kode Supplier': po.supplierCode,
+                    'Nama Supplier': po.supplierName,
+                    'PIC Penerima': po.picReceiver,
+                    'Departemen Penerima': po.deptReceiver,
+                    'Material Kode & Deskripsi': po.materialCodeDesc,
+                    'PO QTY': po.poQty,
+                    'UOM': po.uom,
+                    'Delivered QTY': delivered,
+                    'Remaining QTY': remaining,
+                    'Schedule Date': po.scheduleDate || '-',
+                    'Surat Jalan / Actual Date': po.actualDate || '-',
+                    'Status Delivery': po.status
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportRows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Laporan_Delivery_PO");
+            XLSX.writeFile(wb, `Monitoring_Delivery_PT_MII_${getFormattedDate(0)}.xlsx`);
+        }
+
+
+        // --- MODAL HELPERS ---
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
